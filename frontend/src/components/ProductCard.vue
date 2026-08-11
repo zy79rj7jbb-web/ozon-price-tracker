@@ -14,7 +14,26 @@ const emit = defineEmits(["open"]);
 
     <p>ID: {{ product.id }}</p>
 
-    <p v-if="product.target_price">Цель: {{ product.target_price }} ₽</p>
+    <p v-if="product.current?.price !== null">
+      Текущая цена: {{ product.current.price }} ₽
+    </p>
+
+    <p v-else>Цена: нет данных</p>
+
+    <p v-if="product.change?.difference !== null">
+      Изменение:
+      <span v-if="product.change.difference > 0">
+        +{{ product.change.difference }} ₽
+      </span>
+
+      <span v-else> {{ product.change.difference }} ₽ </span>
+
+      ({{ product.change.percent }}%)
+    </p>
+
+    <p v-if="product.target_price !== null">
+      Цель: {{ product.target_price }} ₽
+    </p>
 
     <p v-else>Целевая цена не задана</p>
   </article>

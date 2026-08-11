@@ -106,6 +106,42 @@ function getCurrentPrice(productId) {
     .get(productId);
 }
 
+function getLatestChange(productId) {
+  const rows = db
+    .prepare(
+      `
+        SELECT
+          price,
+          timestamp
+        FROM price_history
+        WHERE product_id = ?
+        ORDER BY timestamp DESC, id DESC
+        LIMIT 2
+      `,
+    )
+    .all(productId);
+
+  const current = rows[0] ?? null;
+  const previous = rows[1] ?? null;
+
+  const change = calculateChange(
+    previous?.price ?? null,
+    current?.price ?? null,
+  );
+
+  return {
+    current: {
+      price: current?.price ?? null,
+      timestamp: current?.timestamp ?? null,
+    },
+
+    change: {
+      difference: change.difference,
+      percent: change.percent,
+    },
+  };
+}
+
 /*
  * ----------------------------------------
  * СТАТИСТИКА ПЕРИОДА
@@ -437,8 +473,18 @@ app.get("/api/products", (req, res) => {
     )
     .all();
 
+  const productsWithData = products.map((product) => {
+    const data = getLatestChange(product.id);
+
+    return {
+      ...product,
+      current: data.current,
+      change: data.change,
+    };
+  });
+
   res.json({
-    products,
+    products: productsWithData,
   });
 });
 
