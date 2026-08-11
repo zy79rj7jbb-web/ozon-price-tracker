@@ -2,9 +2,9 @@ const express = require("express");
 const db = require("./database");
 
 const app = express();
+app.use(express.json());
 
 const PORT = 3000;
-
 /*
  * ----------------------------------------
  * ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
@@ -468,6 +468,58 @@ app.get("/api/products/:id", (req, res) => {
   }
 
   res.json(data);
+});
+
+app.put("/api/products/:id/target-price", (req, res) => {
+  const productId = Number(req.params.id);
+  const { targetPrice } = req.body;
+
+  if (!Number.isInteger(productId) || productId <= 0) {
+    return res.status(400).json({
+      error: "product_id должен быть положительным целым числом",
+    });
+  }
+
+  if (
+    targetPrice !== null &&
+    (!Number.isInteger(targetPrice) || targetPrice <= 0)
+  ) {
+    return res.status(400).json({
+      error: "targetPrice должен быть положительным целым числом или null",
+    });
+  }
+
+  const result = db
+    .prepare(
+      `
+      UPDATE products
+      SET target_price = ?,
+          target_triggered = 0
+      WHERE id = ?
+      `,
+    )
+    .run(targetPrice, productId);
+
+  if (result.changes === 0) {
+    return res.status(404).json({
+      error: `Товар с id ${productId} не найден`,
+    });
+  }
+
+  const product = db
+    .prepare(
+      `
+      SELECT *
+      FROM products
+      WHERE id = ?
+      `,
+    )
+    .get(productId);
+
+  res.json({
+    success: true,
+    product,
+  });
 });
 
 /*

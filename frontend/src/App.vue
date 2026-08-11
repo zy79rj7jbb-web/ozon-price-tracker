@@ -34,6 +34,24 @@ function closeProduct() {
   selectedProduct.value = null;
 }
 
+function updateProduct(updatedProduct) {
+  if (!selectedProduct.value) return;
+
+  selectedProduct.value = {
+    ...selectedProduct.value,
+    product: {
+      ...selectedProduct.value.product,
+      target_price: updatedProduct.target_price,
+      target_triggered: updatedProduct.target_triggered,
+    },
+    target: {
+      ...selectedProduct.value.target,
+      price: updatedProduct.target_price,
+      triggered: Boolean(updatedProduct.target_triggered),
+    },
+  };
+}
+
 async function fetchProducts() {
   try {
     const response = await fetch("/api/products");
@@ -86,12 +104,12 @@ onMounted(fetchProducts);
       <p v-if="productLoading">Загрузка товара...</p>
 
       <p v-else-if="productError">Ошибка: {{ productError }}</p>
-
       <ProductDetails
         v-if="selectedProduct"
         :product-data="selectedProduct"
         @back="selectedProduct = null"
         @change-period="changeProductPeriod"
+        @target-updated="updateProduct"
       />
     </template>
 
