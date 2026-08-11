@@ -487,6 +487,59 @@ app.get("/api/products", (req, res) => {
     products: productsWithData,
   });
 });
+app.post("/api/products", (req, res) => {
+  const { ozonProductId, name, targetPrice = null } = req.body;
+
+  if (!ozonProductId || !name) {
+    return res.status(400).json({
+      error: "ozonProductId и name обязательны",
+    });
+  }
+
+  if (
+    targetPrice !== null &&
+    (!Number.isInteger(targetPrice) || targetPrice <= 0)
+  ) {
+    return res.status(400).json({
+      error: "targetPrice должен быть положительным целым числом или null",
+    });
+  }
+
+  const result = db
+    .prepare(
+      `
+        INSERT OR IGNORE INTO products (
+          ozon_product_id,
+          name,
+          target_price
+        )
+        VALUES (?, ?, ?)
+      `,
+    )
+    .run(ozonProductId, name, targetPrice);
+
+  const product = db
+    .prepare(
+      `
+        SELECT *
+        FROM products
+        WHERE ozon_product_id = ?
+      `,
+    )
+    .get(ozonProductId);
+
+  if (result.changes === 0) {
+    return res.status(409).json({
+      error: "Товар с таким Ozon ID уже существует",
+      product,
+    });
+  }
+
+  res.status(201).json({
+    success: true,
+    product,
+  });
+});
 
 app.get("/api/products/:id", (req, res) => {
   const productId = Number(req.params.id);

@@ -11,6 +11,66 @@ const selectedProduct = ref(null);
 const productLoading = ref(false);
 const productError = ref(null);
 
+const showAddProduct = ref(false);
+
+const newProduct = ref({
+  ozonProductId: "",
+  name: "",
+  targetPrice: "",
+});
+
+const addProductLoading = ref(false);
+const addProductError = ref(null);
+
+function resetAddProductForm() {
+  newProduct.value = {
+    ozonProductId: "",
+    name: "",
+    targetPrice: "",
+  };
+
+  addProductError.value = null;
+}
+
+async function addProduct() {
+  addProductLoading.value = true;
+  addProductError.value = null;
+
+  try {
+    const targetPrice =
+      newProduct.value.targetPrice === ""
+        ? null
+        : Number(newProduct.value.targetPrice);
+
+    const response = await fetch("/api/products", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        ozonProductId: newProduct.value.ozonProductId.trim(),
+        name: newProduct.value.name.trim(),
+        targetPrice,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || `HTTP ${response.status}`);
+    }
+
+    products.value.push(data.product);
+
+    showAddProduct.value = false;
+    resetAddProductForm();
+  } catch (err) {
+    addProductError.value = err.message;
+  } finally {
+    addProductLoading.value = false;
+  }
+}
+
 async function openProduct(id) {
   productLoading.value = true;
   productError.value = null;
@@ -96,6 +156,60 @@ onMounted(fetchProducts);
   <main>
     <h1>Ozon Price Tracker</h1>
 
+    <button
+      v-if="!selectedProduct"
+      type="button"
+      @click="showAddProduct = !showAddProduct"
+    >
+      {{ showAddProduct ? "Отмена" : "Добавить товар" }}
+    </button>
+
+    <form
+      v-if="showAddProduct && !selectedProduct"
+      @submit.prevent="addProduct"
+    >
+      <h2>Добавить товар</h2>
+
+      <div>
+        <label for="ozonProductId">Ozon Product ID</label>
+
+        <input
+          id="ozonProductId"
+          v-model="newProduct.ozonProductId"
+          type="text"
+          required
+        />
+      </div>
+
+      <div>
+        <label for="productName">Название</label>
+
+        <input
+          id="productName"
+          v-model="newProduct.name"
+          type="text"
+          required
+        />
+      </div>
+
+      <div>
+        <label for="targetPrice">Целевая цена</label>
+
+        <input
+          id="targetPrice"
+          v-model="newProduct.targetPrice"
+          type="number"
+          min="1"
+          placeholder="Необязательно"
+        />
+      </div>
+
+      <button type="submit" :disabled="addProductLoading">
+        {{ addProductLoading ? "Добавление..." : "Добавить" }}
+      </button>
+
+      <p v-if="addProductError">Ошибка: {{ addProductError }}</p>
+    </form>
     <p v-if="loading">Загрузка...</p>
 
     <p v-else-if="error">Ошибка: {{ error }}</p>
